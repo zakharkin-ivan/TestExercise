@@ -76,6 +76,7 @@ namespace TestExercise
                                $"Удаление из базы банка с минимальным id",
                                () => $"Удаление завершено");
         }
+
         /// <summary>
         /// Данная функция должна <b>параллельно</b> запустить три задачи:
         /// <list type="bullet">
@@ -94,7 +95,18 @@ namespace TestExercise
         /// </summary>
         public void Update()
         {
-            throw new NotImplementedException();
+            Parallel.Invoke(
+            async () => await SelectBankFromDbAsync(),
+            async () => await DeleteBankFromDbAsync(),
+            async () =>
+            {
+                foreach (BankModel bankModel in await GetNewBanksAsync())
+                {
+                    await InsertBankIntoDbAsync(bankModel);
+                }
+            });
+
+            //  throw new NotImplementedException();
         }
     }
 }

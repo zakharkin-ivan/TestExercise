@@ -1,6 +1,7 @@
 ﻿using TestExercise.Models;
 using System.Data;
 using System.Net.Http.Json;
+using System;
 
 namespace TestExercise.Controllers.Bank
 {
@@ -26,7 +27,12 @@ namespace TestExercise.Controllers.Bank
         /// </summary>
         public async Task<BankModel[]> GetBanksAsync()
         {
-            throw new NotImplementedException();
+            using (var client = new HttpClient())
+            {
+                var result = await client.GetFromJsonAsync<BankModel[]>(API_URL);
+                return result ?? throw new ArgumentNullException(nameof(result));
+            }
+            //  throw new NotImplementedException();
         }
     }
 }
