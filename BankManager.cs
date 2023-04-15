@@ -94,7 +94,18 @@ namespace TestExercise
         /// </summary>
         public void Update()
         {
-            throw new NotImplementedException();
+            Parallel.Invoke(
+                
+                async () => await SelectBankFromDbAsync(),
+                async () => await DeleteBankFromDbAsync(),
+                async () =>
+                {
+                    var banks = await GetNewBanksAsync();
+                    foreach (var bank in banks)
+                    {
+                        await InsertBankIntoDbAsync(bank);
+                    }
+                });
         }
     }
 }

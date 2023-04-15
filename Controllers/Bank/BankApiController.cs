@@ -1,6 +1,7 @@
 ﻿using TestExercise.Models;
 using System.Data;
 using System.Net.Http.Json;
+using System.Net.Http;
 
 namespace TestExercise.Controllers.Bank
 {
@@ -9,6 +10,12 @@ namespace TestExercise.Controllers.Bank
     /// </summary>
     internal class BankApiController
     {
+        private static HttpClient httpClient;
+
+        static BankApiController()
+        {
+            httpClient = new HttpClient();
+        }
         private const string API_URL = "https://random-data-api.com/api/v2/banks?size=2";
         /// <summary>
         /// Следует реализовать асинхронный <b>HTTP GET</b> запрос к <see cref="API_URL"/>
@@ -26,7 +33,9 @@ namespace TestExercise.Controllers.Bank
         /// </summary>
         public async Task<BankModel[]> GetBanksAsync()
         {
-            throw new NotImplementedException();
+            using HttpResponseMessage response = await httpClient.GetAsync(API_URL);
+            var bankModels = response.Content.ReadFromJsonAsync<BankModel[]>().Result;
+            return bankModels ?? throw new ArgumentNullException(nameof(bankModels));
         }
     }
 }

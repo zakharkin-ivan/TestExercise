@@ -1,4 +1,5 @@
-﻿using System.Data.SQLite;
+﻿using Dapper;
+using System.Data.SQLite;
 using TestExercise.Models;
 
 namespace TestExercise.Controllers.Bank
@@ -38,6 +39,29 @@ namespace TestExercise.Controllers.Bank
                                                 );";
         private const string CONN_STR = "Data Source=MyDatabase.sqlite;Version=3;";
         private const string DB_FILE_NAME = "MyDatabase.sqlite";
+        private const string DELETE_MIN_BANK = $@"DELETE FROM Banks WHERE id = (SELECT MIN(id) FROM Banks)";
+        private const string INSERT_BANK = $@"INSERT INTO Banks 
+                                                (id, uid, account_number, iban, bank_name, routing_number, swift_bic)
+                                                values
+                                                (@{nameof(BankModel.Id)},
+                                                @{nameof(BankModel.UidString)},
+                                                @{nameof(BankModel.AccountNumber)},
+                                                @{nameof(BankModel.Iban)},
+                                                @{nameof(BankModel.BankName)},
+                                                @{nameof(BankModel.RoutingNumber)},
+                                                @{nameof(BankModel.SwiftBic)})
+                                                ";
+        private const string SELECT_ALL_BANKS = $@"SELECT 
+                                                id as {nameof(BankModel.Id)},
+                                                uid as {nameof(BankModel.UidString)},
+                                                account_number as {nameof(BankModel.AccountNumber)},
+                                                iban as {nameof(BankModel.Iban)},
+                                                bank_name as {nameof(BankModel.BankName)},
+                                                routing_number as {nameof(BankModel.RoutingNumber)},
+                                                swift_bic as {nameof(BankModel.SwiftBic)}
+                                                FROM Banks";
+
+
 
         /// <summary>
         /// Использовать в
@@ -63,11 +87,12 @@ namespace TestExercise.Controllers.Bank
         private static void CreateDb()
         {
             SQLiteConnection.CreateFile(DB_FILE_NAME);
-            using var con = GetConnection();
-            con.Open();
-            using var command = new SQLiteCommand(CREATE_TABLE_SQL, con);
-            command.ExecuteNonQuery();
-            con.Close();
+            using (var con = GetConnection())
+            {
+                con.Open();
+                using var command = new SQLiteCommand(CREATE_TABLE_SQL, con);
+                command.ExecuteNonQuery();
+            }
         }
 
         /// <summary>
@@ -76,7 +101,15 @@ namespace TestExercise.Controllers.Bank
         /// </summary>
         public async IAsyncEnumerable<BankModel> SelectAsync()
         {
-            throw new NotImplementedException();
+            using (var con = GetConnection())
+            {
+                con.Open();
+                var bankModels = await con.QueryAsync<BankModel>(SELECT_ALL_BANKS);
+                foreach (var bankModel in bankModels)
+                {
+                    yield return bankModel;
+                }
+            };
         }
         /// <summary>
         /// Должен совершаться <b>INSERT</b> запрос добавляющий <paramref name="bank"/> в <b>Banks</b>.
@@ -84,14 +117,24 @@ namespace TestExercise.Controllers.Bank
         /// </summary>
         public async Task InsertAsync(BankModel bank)
         {
-            throw new NotImplementedException();
+
+            using (var con = GetConnection())
+            {
+                con.Open();
+                using var command = new SQLiteCommand(con);
+                await con.ExecuteAsync(INSERT_BANK, bank);
+            }
         }
         /// <summary>
         /// Должен совершаться <b>Delete</b> запрос, удаляющий банк с <b>наименьшим id</b>
         /// </summary>
         public async Task DeleteAsync()
         {
-            throw new NotImplementedException();
+            using (var con = GetConnection())
+            {
+                con.Open();
+                await con.ExecuteAsync(DELETE_MIN_BANK);
+            };
         }
     }
 }

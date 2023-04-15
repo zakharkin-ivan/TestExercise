@@ -7,8 +7,13 @@ using System.Threading.Tasks;
 
 namespace TestExercise.Models
 {
+    /// <summary>
+    /// <remarks>Добавил UidString для конвертации через Dapper</remarks>
+    /// </summary>
     internal class BankModel
     {
+        public BankModel() { }
+
         public BankModel(int id,
                     Guid uid,
                     long accountNumber,
@@ -39,5 +44,11 @@ namespace TestExercise.Models
         public long RoutingNumber { get; set; }
         [JsonPropertyName("swift_bic")]
         public string SwiftBic { get; set; } = string.Empty;
+
+        public string UidString
+        {
+            get { return Uid.ToString("N"); }
+            set { Uid = new Guid(value); }
+        }
     }
 }
