@@ -38,6 +38,9 @@ namespace TestExercise.Controllers.Bank
                                                     routing_number INTEGER,
                                                     swift_bic TEXT
                                                 );";
+        private const string SELECT_SQL = "SELECT * FROM Banks";
+        private const string INSERT_SQL = "INSERT INTO Banks (id, uid, account_number, iban, bank_name, routing_number, swift_bic) VALUES ($Id, $Uid, $AccountNumber, $Iban, $BankName, $RoutingNumber, $SwiftBic)";
+        private const string DELETE_SQL = "DELETE FROM Banks WHERE id = (SELECT min(id) FROM Banks)";
         private const string CONN_STR = "Data Source=MyDatabase.sqlite;Version=3;";
         private const string DB_FILE_NAME = "MyDatabase.sqlite";
 
@@ -80,22 +83,19 @@ namespace TestExercise.Controllers.Bank
         {
             using var con = GetConnection();
             await con.OpenAsync();
-            var SELECT_SQL = "SELECT * FROM Banks";
             using var command = new SQLiteCommand(SELECT_SQL, con);
             using (DbDataReader reader = await command.ExecuteReaderAsync()) 
             {
                 while (await reader.ReadAsync())
                 {
-                    long id = await reader.GetFieldValueAsync<Int64>(0);
-                    String uid_string = await reader.GetFieldValueAsync<String>(1);
-                    Guid uid = new Guid(uid_string);
-                    long account_number = await reader.GetFieldValueAsync<Int64>(2);
-                    String iban = await reader.GetFieldValueAsync<String>(3);
-                    String bank_name = await reader.GetFieldValueAsync<String>(4);
-                    long routing_number = await reader.GetFieldValueAsync<Int64>(5);
-                    String swift_bic = await reader.GetFieldValueAsync<String>(6);
-                    BankModel bankModel = new((Int32)id, uid, account_number, iban, bank_name, routing_number, swift_bic);
-                    yield return bankModel;
+                    yield return new BankModel(
+                    (Int32)await reader.GetFieldValueAsync<Int64>(0),
+                    new Guid(await reader.GetFieldValueAsync<String>(1)),
+                    await reader.GetFieldValueAsync<Int64>(2),
+                    await reader.GetFieldValueAsync<String>(3),
+                    await reader.GetFieldValueAsync<String>(4),
+                    await reader.GetFieldValueAsync<Int64>(5),
+                    await reader.GetFieldValueAsync<String>(6));
                 }
             }
             await con.CloseAsync();
@@ -109,8 +109,18 @@ namespace TestExercise.Controllers.Bank
         {
             using var con = GetConnection();
             await con.OpenAsync();
-            var INSERT_SQL = $"INSERT INTO Banks (id, uid, account_number, iban, bank_name, routing_number, swift_bic) VALUES ({bank.Id}, '{bank.Uid}', {bank.AccountNumber}, '{bank.Iban}', '{bank.BankName}', {bank.RoutingNumber}, '{bank.SwiftBic}')";
             using var command = new SQLiteCommand(INSERT_SQL, con);
+            command.Parameters.AddWithValue("$Id", bank.Id);
+            SQLiteParameter uid = new("$Uid", DbType.String)
+            {
+                Value = bank.Uid
+            };
+            command.Parameters.Add(uid);
+            command.Parameters.AddWithValue("$AccountNumber", bank.AccountNumber);
+            command.Parameters.AddWithValue("$Iban", bank.Iban);
+            command.Parameters.AddWithValue("$BankName", bank.BankName);
+            command.Parameters.AddWithValue("$RoutingNumber", bank.RoutingNumber);
+            command.Parameters.AddWithValue("$SwiftBic", bank.SwiftBic);
             //  await command.ExecuteNonQueryAsync();
             command.ExecuteNonQuery();
             await con.CloseAsync();
@@ -123,7 +133,6 @@ namespace TestExercise.Controllers.Bank
         {
             using var con = GetConnection();
             await con.OpenAsync();
-            var DELETE_SQL = $"DELETE FROM Banks WHERE id = (SELECT min(id) FROM Banks)";
             using var command = new SQLiteCommand(DELETE_SQL, con);
             await command.ExecuteNonQueryAsync();
             await con.CloseAsync();

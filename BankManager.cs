@@ -1,4 +1,5 @@
-﻿using TestExercise.Controllers.Bank;
+﻿using System.ComponentModel;
+using TestExercise.Controllers.Bank;
 using TestExercise.Controllers.Log;
 using TestExercise.Models;
 
@@ -93,20 +94,21 @@ namespace TestExercise
         ///     будет также осуществляться параллельно
         /// </para>
         /// </summary>
-        public void Update()
+        public async void Update()
         {
-            Parallel.Invoke(
-            async () => await SelectBankFromDbAsync(),
-            async () => await DeleteBankFromDbAsync(),
-            async () =>
-            {
-                foreach (BankModel bankModel in await GetNewBanksAsync())
+            await Task.WhenAll(
+                new List<Task>()
                 {
-                    await InsertBankIntoDbAsync(bankModel);
-                }
-            });
-
-            //  throw new NotImplementedException();
+                    Task.Run(() => SelectBankFromDbAsync()),
+                    Task.Run(() => DeleteBankFromDbAsync()),
+                    Task.Run(() => 
+                    {
+                        foreach(BankModel bankModel in Task.Run(() => GetNewBanksAsync()).Result)
+                        {
+                            Task.Run(() => InsertBankIntoDbAsync(bankModel));
+                        } 
+                    })
+                }); 
         }
     }
 }
