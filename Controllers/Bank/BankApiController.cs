@@ -10,6 +10,7 @@ namespace TestExercise.Controllers.Bank
     internal class BankApiController
     {
         private const string API_URL = "https://random-data-api.com/api/v2/banks?size=2";
+        private static HttpClient httpClient = new HttpClient();
         /// <summary>
         /// Следует реализовать асинхронный <b>HTTP GET</b> запрос к <see cref="API_URL"/>
         /// <para>
@@ -26,7 +27,8 @@ namespace TestExercise.Controllers.Bank
         /// </summary>
         public async Task<BankModel[]> GetBanksAsync()
         {
-            throw new NotImplementedException();
+            var response = await httpClient.GetFromJsonAsync<List<BankModel>>(API_URL);
+            return response?.ToArray() ?? new BankModel[0];
         }
     }
 }
