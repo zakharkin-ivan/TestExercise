@@ -92,9 +92,19 @@ namespace TestExercise
         ///     будет также осуществляться параллельно
         /// </para>
         /// </summary>
-        public void Update()
+        public async void Update()
         {
-            throw new NotImplementedException();
+            var tasks = new List<Task>();
+            tasks.Add(Task.Run(SelectBankFromDbAsync));
+            tasks.Add(Task.Run(DeleteBankFromDbAsync));
+
+            var banks = GetNewBanksAsync();
+            foreach (var bank in await banks)
+            {
+                tasks.Add(Task.Run(()=>InsertBankIntoDbAsync(bank)));
+            }
+
+            Task.WaitAll(tasks.ToArray());
         }
     }
 }

@@ -39,6 +39,13 @@ namespace TestExercise.Controllers.Bank
         private const string CONN_STR = "Data Source=MyDatabase.sqlite;Version=3;";
         private const string DB_FILE_NAME = "MyDatabase.sqlite";
 
+        private const string SELECT_FROM_BANKS_SQL = @"SELECT * FROM Banks";
+        private const string INSERT_INTO_BANKS_SQL = @"INSERT INTO Banks (id, uid, account_number, iban,
+                                                        bank_name, routing_number, swift_bic) 
+                                                        VALUES (@id, @uid, @account_number, @iban,
+                                                        @bank_name, @routing_number, @swift_bic)";
+        private const string DELETE_FROM_BANKS_SQL = @"DELETE FROM Banks WHERE id = (SELECT MIN(id) FROM Banks)";
+
         /// <summary>
         /// Использовать в
         /// <list type="bullet">
@@ -76,7 +83,30 @@ namespace TestExercise.Controllers.Bank
         /// </summary>
         public async IAsyncEnumerable<BankModel> SelectAsync()
         {
-            throw new NotImplementedException();
+            using var connection = GetConnection();
+            connection.Open();
+
+            using var command = new SQLiteCommand(SELECT_FROM_BANKS_SQL, connection);
+            using var reader = await command.ExecuteReaderAsync();
+
+            if (reader.HasRows)
+            {
+                while (reader.Read())
+                {
+                    var bank = new BankModel(
+                        reader.GetInt32(0),
+                        reader.GetGuid(1),
+                        reader.GetInt64(2),
+                        reader.GetString(3),
+                        reader.GetString(4),
+                        reader.GetInt64(5),
+                        reader.GetString(6));
+
+                    yield return bank;
+                }
+            }
+
+            connection.Close();
         }
         /// <summary>
         /// Должен совершаться <b>INSERT</b> запрос добавляющий <paramref name="bank"/> в <b>Banks</b>.
@@ -84,14 +114,33 @@ namespace TestExercise.Controllers.Bank
         /// </summary>
         public async Task InsertAsync(BankModel bank)
         {
-            throw new NotImplementedException();
+            using var connection = GetConnection();
+            connection.Open();
+
+            using var command = new SQLiteCommand(INSERT_INTO_BANKS_SQL, connection);
+            command.Parameters.AddWithValue("@id", bank.Id);
+            command.Parameters.AddWithValue("@uid", bank.Uid);
+            command.Parameters.AddWithValue("@account_number", bank.AccountNumber);
+            command.Parameters.AddWithValue("@iban", bank.Iban);
+            command.Parameters.AddWithValue("@bank_name", bank.BankName);
+            command.Parameters.AddWithValue("@routing_number", bank.RoutingNumber);
+            command.Parameters.AddWithValue("@swift_bic", bank.SwiftBic);
+            await command.ExecuteNonQueryAsync();
+
+            connection.Close();
         }
         /// <summary>
         /// Должен совершаться <b>Delete</b> запрос, удаляющий банк с <b>наименьшим id</b>
         /// </summary>
         public async Task DeleteAsync()
         {
-            throw new NotImplementedException();
+            using var connection = GetConnection();
+            connection.Open();
+
+            using var command = new SQLiteCommand(DELETE_FROM_BANKS_SQL, connection);
+            await command.ExecuteNonQueryAsync();
+
+            connection.Close();
         }
     }
 }
