@@ -4,6 +4,7 @@ using TestExercise.Models;
 
 namespace TestExercise
 {
+
     /// <summary>
     /// Написать тело функции <see cref="Update"/>
     /// </summary>
@@ -12,6 +13,7 @@ namespace TestExercise
         private readonly BankApiController apiController;
         private readonly BankDbController dbController;
         private readonly LogControllerBase logController;
+        private readonly int _addBanksCount = 2;
 
         public BankManager(BankApiController apiController,
                            BankDbController dbController,
@@ -94,7 +96,35 @@ namespace TestExercise
         /// </summary>
         public void Update()
         {
-            throw new NotImplementedException();
+            var tasks = new Task[]
+                {
+                new Task(async () => await SelectBankFromDbAsync()),
+                new Task(async () => await DeleteBankFromDbAsync()),
+                new Task(async() => await AddBanksIntoDb(_addBanksCount))
+                };
+
+            foreach (var tsk in tasks)
+            {
+                tsk.Start();
+            }
+
+            Task.WaitAll(tasks);
+        }
+
+        private async Task AddBanksIntoDb(int count)
+        {
+            var newBanks = await GetNewBanksAsync();
+            if (newBanks.Length >= count)
+            {
+                var tasks = new Task[count];
+                var rg = Enumerable.Range(0, count);
+                foreach (var i in rg)
+                {
+                    tasks[i] = new Task(async () => await InsertBankIntoDbAsync(newBanks[i]));
+                    tasks[i].Start();
+                }
+                Task.WaitAll(tasks);
+            }
         }
     }
 }

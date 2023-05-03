@@ -1,4 +1,6 @@
-﻿using System.Data.SQLite;
+﻿using System.Data;
+using System.Data.SQLite;
+using TestExercise.Enums;
 using TestExercise.Models;
 
 namespace TestExercise.Controllers.Bank
@@ -27,17 +29,36 @@ namespace TestExercise.Controllers.Bank
     /// </summary>
     internal class BankDbController
     {
-        private const string CREATE_TABLE_SQL = @"CREATE TABLE IF NOT EXISTS Banks (
-                                                    id INTEGER,
-                                                    uid TEXT,
-                                                    account_number INTEGER,
-                                                    iban TEXT,
-                                                    bank_name TEXT,
-                                                    routing_number INTEGER,
-                                                    swift_bic TEXT
+        private const string CREATE_TABLE_SQL = $@"CREATE TABLE IF NOT EXISTS Banks (
+                                                    {nameof(BankPropEnum.id)} INTEGER,
+                                                    {nameof(BankPropEnum.uid)} TEXT,
+                                                    {nameof(BankPropEnum.account_number)} INTEGER,
+                                                    {nameof(BankPropEnum.iban)} TEXT,
+                                                    {nameof(BankPropEnum.bank_name)} TEXT,
+                                                    {nameof(BankPropEnum.routing_number)} INTEGER,
+                                                    {nameof(BankPropEnum.swift_bic)} TEXT
                                                 );";
         private const string CONN_STR = "Data Source=MyDatabase.sqlite;Version=3;";
         private const string DB_FILE_NAME = "MyDatabase.sqlite";
+        private const string SELECT_ALL_DATA = "SELECT * FROM Banks";
+        private const string SELECT_MIN_ID = $"SELECT MIN({nameof(BankPropEnum.id)}) FROM Banks";
+        private const string DELETE_MIN_ID_ROW = $"DELETE FROM Banks " +
+                                                 $"WHERE {nameof(BankPropEnum.id)} = :{nameof(BankPropEnum.id)}";
+        private const string INSERT_INTO_BANKS =
+            $"INSERT INTO Banks ({nameof(BankPropEnum.id)}, " +
+                               $"{nameof(BankPropEnum.uid)}, " +
+                               $"{nameof(BankPropEnum.account_number)}, " +
+                               $"{nameof(BankPropEnum.iban)}, " +
+                               $"{nameof(BankPropEnum.bank_name)}, " +
+                               $"{nameof(BankPropEnum.routing_number)}, " +
+                               $"{nameof(BankPropEnum.swift_bic)}) " +
+                       $"VALUES (@{nameof(BankPropEnum.id)}, " +
+                               $"@{nameof(BankPropEnum.uid)}, " +
+                               $"@{nameof(BankPropEnum.account_number)}, " +
+                               $"@{nameof(BankPropEnum.iban)}, " +
+                               $"@{nameof(BankPropEnum.bank_name)}, " +
+                               $"@{nameof(BankPropEnum.routing_number)}, " +
+                               $"@{nameof(BankPropEnum.swift_bic)})";
 
         /// <summary>
         /// Использовать в
@@ -56,7 +77,7 @@ namespace TestExercise.Controllers.Bank
         {
             CreateDb();
         }
-       
+
         /// <summary>
         /// <b>Не менять.</b> Создаёт файл БД SQLite.
         /// </summary>
@@ -76,7 +97,23 @@ namespace TestExercise.Controllers.Bank
         /// </summary>
         public async IAsyncEnumerable<BankModel> SelectAsync()
         {
-            throw new NotImplementedException();
+            using var con = GetConnection();
+            con.Open();
+            using var command = new SQLiteCommand(SELECT_ALL_DATA, con);
+            using var reader = await command.ExecuteReaderAsync();
+            if (reader.HasRows)
+            {
+                while (reader.Read())
+                {
+                    yield return new BankModel(reader.GetInt32(nameof(BankPropEnum.id)),
+                                               reader.GetGuid(nameof(BankPropEnum.uid)),
+                                               reader.GetInt64(nameof(BankPropEnum.account_number)),
+                                               reader.GetString(nameof(BankPropEnum.iban)),
+                                               reader.GetString(nameof(BankPropEnum.bank_name)),
+                                               reader.GetInt64(nameof(BankPropEnum.routing_number)),
+                                               reader.GetString(nameof(BankPropEnum.swift_bic)));
+                }
+            }
         }
         /// <summary>
         /// Должен совершаться <b>INSERT</b> запрос добавляющий <paramref name="bank"/> в <b>Banks</b>.
@@ -84,14 +121,50 @@ namespace TestExercise.Controllers.Bank
         /// </summary>
         public async Task InsertAsync(BankModel bank)
         {
-            throw new NotImplementedException();
+
+            using var con = GetConnection();
+            con.Open();
+            using var command = new SQLiteCommand(INSERT_INTO_BANKS, con);
+            command.Parameters.AddWithValue(nameof(BankPropEnum.id), bank.Id);
+            command.Parameters.AddWithValue(nameof(BankPropEnum.uid), bank.Uid.ToString());
+            command.Parameters.AddWithValue(nameof(BankPropEnum.account_number), bank.AccountNumber);
+            command.Parameters.AddWithValue(nameof(BankPropEnum.iban), bank.Iban);
+            command.Parameters.AddWithValue(nameof(BankPropEnum.bank_name), bank.BankName);
+            command.Parameters.AddWithValue(nameof(BankPropEnum.routing_number), bank.RoutingNumber);
+            command.Parameters.AddWithValue(nameof(BankPropEnum.swift_bic), bank.SwiftBic);
+            await command.ExecuteNonQueryAsync();
+
         }
         /// <summary>
         /// Должен совершаться <b>Delete</b> запрос, удаляющий банк с <b>наименьшим id</b>
         /// </summary>
         public async Task DeleteAsync()
         {
-            throw new NotImplementedException();
+            var id = await GetMinId();
+            if (!string.IsNullOrWhiteSpace(id))
+            {
+                using var con = GetConnection();
+                con.Open();
+                using var command = new SQLiteCommand(DELETE_MIN_ID_ROW, con);
+                command.Parameters.AddWithValue("id", id);
+                await command.ExecuteNonQueryAsync();
+            }
+        }
+
+        private async Task<string> GetMinId()
+        {
+            using var con = GetConnection();
+            con.Open();
+            using var command = new SQLiteCommand(SELECT_MIN_ID, con);
+            using var reader = await command.ExecuteReaderAsync();
+
+            var result = string.Empty;
+            if (reader.HasRows)
+            {
+                reader.Read();
+                result = reader.GetValue(0).ToString() ?? string.Empty;
+            }
+            return result;
         }
     }
 }
