@@ -26,7 +26,11 @@ namespace TestExercise.Controllers.Bank
         /// </summary>
         public async Task<BankModel[]> GetBanksAsync()
         {
-            throw new NotImplementedException();
+            using var client = new HttpClient();
+
+            BankModel[] banks = await client.GetFromJsonAsync<BankModel[]>(API_URL);
+
+            return banks;
         }
     }
 }
