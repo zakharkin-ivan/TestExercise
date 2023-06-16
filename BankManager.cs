@@ -36,7 +36,6 @@ namespace TestExercise
         private async Task<BankModel[]> GetNewBanksAsync()
         {
             var res = Array.Empty<BankModel>();
-            Console.WriteLine("Get : " + Environment.CurrentManagedThreadId);
             await LoggedAction(async () => res = await apiController.GetBanksAsync(),
                                "Запрос списка новых банков",
                                () => $"Получены банки {string.Join(", ", res.Select(b => b.Id))}");
@@ -47,8 +46,6 @@ namespace TestExercise
         /// </summary>
         private async Task<IEnumerable<BankModel>> SelectBankFromDbAsync()
         {
-            Console.WriteLine("Select : " + Environment.CurrentManagedThreadId);
-
             List<BankModel> res = new();
             await LoggedAction(async () =>
             {
@@ -66,8 +63,6 @@ namespace TestExercise
         /// </summary>
         private async Task InsertBankIntoDbAsync(BankModel bank)
         {
-            Console.WriteLine("Insert : " + Environment.CurrentManagedThreadId);
-
             await LoggedAction(async () => await dbController.InsertAsync(bank),
                                $"Добавление в базу {bank.Id}",
                                () => $"В базу добавлен {bank.Id}");
@@ -77,8 +72,6 @@ namespace TestExercise
         /// </summary>
         private async Task DeleteBankFromDbAsync()
         {
-            Console.WriteLine("Delete : " + Environment.CurrentManagedThreadId);
-
             await LoggedAction(dbController.DeleteAsync,
                                $"Удаление из базы банка с минимальным id",
                                () => $"Удаление завершено");
@@ -101,8 +94,6 @@ namespace TestExercise
         /// </summary>
         public async void Update()
         {
-            Console.WriteLine("Update : " + Environment.CurrentManagedThreadId);
-
             var tasks = new List<Task>
             {
                 Task.Run(SelectBankFromDbAsync),
