@@ -1,14 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
+﻿using System.Text.Json.Serialization;
 
 namespace TestExercise.Models
 {
     internal class BankModel
     {
+        public BankModel() { }
         public BankModel(int id,
                     Guid uid,
                     long accountNumber,

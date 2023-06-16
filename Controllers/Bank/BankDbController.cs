@@ -1,4 +1,6 @@
-﻿using System.Data.SQLite;
+﻿using System.Data;
+using System.Data.SQLite;
+using Dapper;
 using TestExercise.Models;
 
 namespace TestExercise.Controllers.Bank
@@ -29,15 +31,25 @@ namespace TestExercise.Controllers.Bank
     {
         private const string CREATE_TABLE_SQL = @"CREATE TABLE IF NOT EXISTS Banks (
                                                     id INTEGER,
-                                                    uid TEXT,
+                                                    uid Guid,
                                                     account_number INTEGER,
                                                     iban TEXT,
                                                     bank_name TEXT,
                                                     routing_number INTEGER,
                                                     swift_bic TEXT
                                                 );";
+        
         private const string CONN_STR = "Data Source=MyDatabase.sqlite;Version=3;";
         private const string DB_FILE_NAME = "MyDatabase.sqlite";
+
+        private const string GET_BANKS_SQL = @"SELECT * FROM Banks";
+        
+        private const string INSERT_BANK_SQL = @"INSERT INTO Banks 
+                                    (id, uid, account_number, iban, bank_name, routing_number, swift_bic) 
+                                    VALUES (@Id, @Uid, @AccountNumber, @Iban, @BankName, @RoutingNumber, @SwiftBic)";
+        
+        private const string DELETE_BANK_SQL = @"DELETE FROM Banks 
+                                                WHERE id = (SELECT MIN(id) FROM Banks)";
 
         /// <summary>
         /// Использовать в
@@ -76,7 +88,15 @@ namespace TestExercise.Controllers.Bank
         /// </summary>
         public async IAsyncEnumerable<BankModel> SelectAsync()
         {
-            throw new NotImplementedException();
+            await using var connection = GetConnection();
+            await connection.OpenAsync();
+
+            var banks = await connection.QueryAsync<BankModel>(GET_BANKS_SQL);
+
+            foreach (var bank in banks)
+                yield return bank;
+            
+            await connection.CloseAsync();
         }
         /// <summary>
         /// Должен совершаться <b>INSERT</b> запрос добавляющий <paramref name="bank"/> в <b>Banks</b>.
@@ -84,14 +104,24 @@ namespace TestExercise.Controllers.Bank
         /// </summary>
         public async Task InsertAsync(BankModel bank)
         {
-            throw new NotImplementedException();
+            await using var connection = GetConnection();
+            await connection.OpenAsync();
+            await connection.ExecuteAsync(INSERT_BANK_SQL, bank);
+            await connection.CloseAsync();
         }
+        
+        
         /// <summary>
         /// Должен совершаться <b>Delete</b> запрос, удаляющий банк с <b>наименьшим id</b>
         /// </summary>
         public async Task DeleteAsync()
         {
-            throw new NotImplementedException();
+            await using var connection = GetConnection();
+            await connection.OpenAsync();
+
+            await using var command = new SQLiteCommand(DELETE_BANK_SQL, connection);
+            await command.ExecuteNonQueryAsync();
+            await connection.CloseAsync();
         }
     }
 }

@@ -35,7 +35,7 @@ namespace TestExercise
         /// </summary>
         private async Task<BankModel[]> GetNewBanksAsync()
         {
-            BankModel[] res = Array.Empty<BankModel>();
+            var res = Array.Empty<BankModel>();
             await LoggedAction(async () => res = await apiController.GetBanksAsync(),
                                "Запрос списка новых банков",
                                () => $"Получены банки {string.Join(", ", res.Select(b => b.Id))}");
@@ -92,9 +92,19 @@ namespace TestExercise
         ///     будет также осуществляться параллельно
         /// </para>
         /// </summary>
-        public void Update()
+        public async void Update()
         {
-            throw new NotImplementedException();
+            var tasks = new List<Task>
+            {
+                Task.Run(SelectBankFromDbAsync),
+                Task.Run(DeleteBankFromDbAsync)
+            };
+
+            var bankModels = await GetNewBanksAsync();
+            
+            tasks.AddRange(bankModels.Select(bankModel => Task.Run(() => InsertBankIntoDbAsync(bankModel))));
+
+            Task.WaitAll(tasks.ToArray());
         }
     }
 }
